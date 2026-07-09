@@ -56,7 +56,7 @@ class GitHubClient:
     def get_pr_files(self, owner: str, repo: str, pr_number: int) -> list[dict]:
         """Return the list of changed files for a PR (name, status, raw_url, patch)."""
         url = f"{self.base_url}/repos/{owner}/{repo}/pulls/{pr_number}/files"
-        with httpx.Client(timeout=15) as client:
+        with httpx.Client(timeout=15, follow_redirects=True) as client:
             params = {"per_page": _MAX_FILES_PER_PR}
             response = client.get(url, headers=self._headers(), params=params)
             response.raise_for_status()
@@ -64,7 +64,7 @@ class GitHubClient:
 
     def get_file_content(self, raw_url: str) -> str:
         """Fetch the raw content of a file from its GitHub-provided raw_url."""
-        with httpx.Client(timeout=15) as client:
+        with httpx.Client(timeout=15, follow_redirects=True) as client:
             response = client.get(raw_url, headers=self._headers())
             response.raise_for_status()
             return response.text
@@ -88,6 +88,6 @@ class GitHubClient:
     def post_pr_comment(self, owner: str, repo: str, pr_number: int, body: str) -> None:
         """Post a Markdown comment on a PR (uses the issues API, which PRs share)."""
         url = f"{self.base_url}/repos/{owner}/{repo}/issues/{pr_number}/comments"
-        with httpx.Client(timeout=15) as client:
+        with httpx.Client(timeout=15, follow_redirects=True) as client:
             response = client.post(url, headers=self._headers(), json={"body": body})
             response.raise_for_status()
