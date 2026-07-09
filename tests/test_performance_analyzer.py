@@ -33,6 +33,44 @@ def test_single_query_outside_loop_not_flagged():
     assert "n_plus_one_query" not in _categories(result)
 
 
+def test_dict_get_in_loop_not_flagged_as_n_plus_one():
+    """Real false positive found by running this tool on its own codebase:
+    file_meta.get("status") in a loop is a plain dict lookup, not a DB call."""
+    code = (
+        "def process(items):\n"
+        "    out = []\n"
+        "    for item in items:\n"
+        "        out.append(item.get('status'))\n"
+        "    return out\n"
+    )
+    result = make_agent().scan_file("service.py", code)
+    assert "n_plus_one_query" not in _categories(result)
+
+
+def test_http_client_get_in_loop_not_flagged_as_n_plus_one():
+    code = (
+        "def fetch_all(urls, client):\n"
+        "    out = []\n"
+        "    for url in urls:\n"
+        "        out.append(client.get(url))\n"
+        "    return out\n"
+    )
+    result = make_agent().scan_file("service.py", code)
+    assert "n_plus_one_query" not in _categories(result)
+
+
+def test_str_find_in_loop_not_flagged_as_n_plus_one():
+    code = (
+        "def count_matches(lines, needle):\n"
+        "    hits = []\n"
+        "    for line in lines:\n"
+        "        hits.append(line.find(needle))\n"
+        "    return hits\n"
+    )
+    result = make_agent().scan_file("service.py", code)
+    assert "n_plus_one_query" not in _categories(result)
+
+
 # --- cyclomatic complexity ------------------------------------------------------
 
 def test_flags_high_complexity_function():
