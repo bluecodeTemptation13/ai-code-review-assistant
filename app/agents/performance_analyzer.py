@@ -19,7 +19,7 @@ from app.models.schemas import FileScanResult, Finding, ScanReport, ScanRequest,
 from app.utils.ast_helpers import dotted_name, parse_or_none
 
 _DB_CALL_NAMES = {
-    "execute", "executemany", "query", "filter", "get", "find", "find_one",
+    "execute", "executemany", "query", "filter", "find_one",
     "fetchone", "fetchall", "select", "objects",
 }
 
