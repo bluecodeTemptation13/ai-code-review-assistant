@@ -6,11 +6,11 @@ for context-aware review, and posts the result as a PR comment.
 
 ## Status
 
-Build complete for the planned scope (Security Scanner, Performance
-Analyzer, LangGraph orchestration, Report Generator, GitHub webhook).
-**Not yet run against a real PR** — that's the next step before any
-metrics (review time reduction, issues caught, PR count) get added
-anywhere, including the resume. No fabricated numbers here.
+Build complete for the full planned scope: Security Scanner, Performance
+Analyzer, Code Quality Agent, LangGraph orchestration, Report Generator,
+GitHub webhook. **Not yet run against a real PR** — that's the next step
+before any metrics (review time reduction, issues caught, PR count) get
+added anywhere, including the resume. No fabricated numbers here.
 
 ## Architecture
 
@@ -26,8 +26,9 @@ GitHub PR event
       v
  LangGraph review graph (graph.py)
       |
-      +--> Security Scanner    (app/agents/security_scanner.py)
+      +--> Security Scanner     (app/agents/security_scanner.py)
       +--> Performance Analyzer (app/agents/performance_analyzer.py)
+      +--> Code Quality Agent   (app/agents/code_quality.py)
       +--> Report Generator     (app/agents/report_generator.py)
       |
       v
@@ -45,8 +46,12 @@ GitHub PR event
 - **Performance Analyzer** — static AST rules only: N+1 query patterns,
   cyclomatic complexity over threshold, blocking I/O inside `async def`,
   and O(n²) string concatenation in loops.
-- **Report Generator** — combines both agents' findings into one Markdown
-  report with a summary table and per-file, severity-sorted detail.
+- **Code Quality Agent** — static AST/regex rules only: naming convention
+  violations (function/class), missing docstrings on public
+  functions/classes/modules, unreachable (dead) code after
+  return/raise/break/continue, and unused imports.
+- **Report Generator** — combines all three agents' findings into one
+  Markdown report with a summary table and per-file, severity-sorted detail.
 
 ## Setup
 
@@ -86,7 +91,7 @@ subscribe to the `Pull requests` event.
 pytest tests/ -v
 ```
 
-43 tests, all static/mocked — no network access or API key required to
+56 tests, all static/mocked — no network access or API key required to
 run the suite. Covers: static rule true-positives, true-negative cases
 (parameterized queries, safe YAML loading, placeholder secrets, etc.),
 the full LangGraph run end-to-end, and the webhook route with GitHub
@@ -130,7 +135,4 @@ tests/
 
 - Real-PR validation (accuracy check against actual review comments a
   human would leave)
-- Code Quality Agent (naming, dead code, doc gaps) — scoped originally
-  but not built; Security + Performance covers the highest-value cases
-  first
 - Metrics of any kind — pending the above
