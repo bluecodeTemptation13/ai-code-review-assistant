@@ -22,10 +22,12 @@ import sys
 import threading
 from datetime import datetime, timezone
 
-APPLICATION_NAME = "ai-code-review-assistant"
+from app.config.settings import get_settings
 
 
 class JsonFormatter(logging.Formatter):
+    """Formats every log record as a single JSON line matching the shared schema."""
+
     def format(self, record: logging.LogRecord) -> str:
         payload = {
             "@timestamp": datetime.now(timezone.utc).isoformat(),
@@ -37,7 +39,7 @@ class JsonFormatter(logging.Formatter):
             "@version": "1.0",
             "thread_name": threading.current_thread().name,
             "level": record.levelname,
-            "application": APPLICATION_NAME,
+            "application": get_settings().app_name,
         }
         if record.exc_info:
             payload["exception"] = self.formatException(record.exc_info)
@@ -55,6 +57,6 @@ def get_logger(name: str | None = None) -> logging.Logger:
         handler = logging.StreamHandler(sys.stdout)
         handler.setFormatter(JsonFormatter())
         logger.addHandler(handler)
-        logger.setLevel(logging.INFO)
+        logger.setLevel(get_settings().log_level)
         logger.propagate = False
     return logger

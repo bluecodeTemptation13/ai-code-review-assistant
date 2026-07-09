@@ -28,7 +28,6 @@ from app.utils.ast_helpers import parse_or_none
 _SNAKE_CASE_RE = re.compile(r"^_{0,2}[a-z][a-z0-9_]*$")
 _PASCAL_CASE_RE = re.compile(r"^[A-Z][a-zA-Z0-9]*$")
 _TERMINATOR_TYPES = (ast.Return, ast.Raise, ast.Break, ast.Continue)
-_IGNORED_NAMES = {"i", "j", "k", "_", "x", "y", "z"}
 
 
 def _is_dunder(name: str) -> bool:
