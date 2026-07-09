@@ -48,6 +48,36 @@ def test_dunder_methods_not_flagged():
     assert "naming_convention" not in _categories(result)
 
 
+def test_ast_visitor_dispatch_methods_not_flagged():
+    """Real false positive found scanning this project's own source: ast.NodeVisitor
+    requires exact visit_<NodeClassName> method names to dispatch correctly -
+    that's not a naming violation, it's the base class's protocol."""
+    code = (
+        '"""Module docstring."""\n'
+        "import ast\n\n\n"
+        "class ComplexityVisitor(ast.NodeVisitor):\n"
+        '    """Docstring."""\n'
+        "    def visit_If(self, node):\n"
+        "        self.generic_visit(node)\n"
+        "    def visit_BoolOp(self, node):\n"
+        "        self.generic_visit(node)\n"
+    )
+    result = make_agent().scan_file("mod.py", code)
+    assert "naming_convention" not in _categories(result)
+
+
+def test_private_pascal_case_class_not_flagged():
+    """A single leading underscore for a private/internal class is standard
+    PEP 8 style, not a naming violation."""
+    code = (
+        '"""Module docstring."""\n'
+        "class _InternalHelper:\n"
+        '    """Docstring."""\n'
+    )
+    result = make_agent().scan_file("mod.py", code)
+    assert "naming_convention" not in _categories(result)
+    
+
 # --- missing docstrings ---------------------------------------------------------
 
 def test_flags_public_function_missing_docstring():

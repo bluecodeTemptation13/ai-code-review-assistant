@@ -100,8 +100,14 @@ def scan_hardcoded_secrets(file_path: str, lines: list[str]) -> list[Finding]:
     return findings
 
 
-def scan_dangerous_calls(file_path: str, lines: list[str]) -> list[Finding]:
-    """Line-level checks for eval/exec, shell=True, and verify=False (framework-agnostic)."""
+def scan_dangerous_calls_non_python(file_path: str, lines: list[str]) -> list[Finding]:
+    """Line-level fallback for non-Python files (JS/TS/etc.) where we have no AST parser.
+
+    Only used for non-.py files. For Python, scan_python_ast above does the
+    equivalent checks at the actual call site, which avoids matching these
+    same keywords when they appear inside a string literal, docstring, or
+    comment (a real false positive this tool found by scanning its own code).
+    """
     findings = []
     for i, line in enumerate(lines, start=1):
         if re.search(r"\beval\s*\(", line):
@@ -150,6 +156,45 @@ def scan_python_ast(file_path: str, source: str) -> list[Finding]:
             continue
         short_name = called.rsplit(".", maxsplit=1)[-1]
 
+        # eval/exec: only a real call site counts, never a mention in a string/docstring
+        if short_name == "eval" and called == "eval":
+            findings.append(Finding(
+                rule_id="SEC-EVAL", category="dangerous_eval", severity=Severity.CRITICAL,
+                file_path=file_path, line_number=node.lineno,
+                message="Use of eval() on data that may be externally influenced.",
+            ))
+        if short_name == "exec" and called == "exec":
+            findings.append(Finding(
+                rule_id="SEC-EXEC", category="dangerous_exec", severity=Severity.CRITICAL,
+                file_path=file_path, line_number=node.lineno,
+                message="Use of exec() on data that may be externally influenced.",
+            ))
+
+        # shell=True on an actual subprocess/os.system call site
+        if short_name in {"Popen", "call", "run", "check_call", "check_output", "system"}:
+            has_shell_true = any(
+                kw.arg == "shell" and isinstance(kw.value, ast.Constant) and kw.value.value is True
+                for kw in node.keywords
+            )
+            if has_shell_true:
+                findings.append(Finding(
+                    rule_id="SEC-SHELL-INJECTION", category="shell_injection", severity=Severity.HIGH,
+                    file_path=file_path, line_number=node.lineno,
+                    message="Subprocess call with shell=True risks shell injection on dynamic input.",
+                ))
+
+        # verify=False on an actual call's keyword argument, not text mentioning it
+        has_verify_false = any(
+            kw.arg == "verify" and isinstance(kw.value, ast.Constant) and kw.value.value is False
+            for kw in node.keywords
+        )
+        if has_verify_false:
+            findings.append(Finding(
+                rule_id="SEC-TLS-VERIFY-DISABLED", category="insecure_transport",
+                severity=Severity.HIGH, file_path=file_path, line_number=node.lineno,
+                message="TLS certificate verification is disabled (verify=False).",
+            ))
+
         # SQL injection: sink call whose first arg is dynamically built AND sql-like
         if short_name in _SINK_CALL_NAMES and node.args and hasattr(ast, "unparse"):
             first_arg = node.args[0]
@@ -188,9 +233,10 @@ def run_all_static_rules(file_path: str, content: str) -> list[Finding]:
     """Run every static rule against a file and return the combined findings."""
     lines = content.splitlines()
     findings = scan_hardcoded_secrets(file_path, lines)
-    findings += scan_dangerous_calls(file_path, lines)
     if file_path.endswith(".py"):
         findings += scan_python_ast(file_path, content)
+    else:
+        findings += scan_dangerous_calls_non_python(file_path, lines)
     return findings
 
 

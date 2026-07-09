@@ -26,9 +26,9 @@ from app.models.schemas import FileScanResult, Finding, ScanReport, ScanRequest,
 from app.utils.ast_helpers import parse_or_none
 
 _SNAKE_CASE_RE = re.compile(r"^_{0,2}[a-z][a-z0-9_]*$")
-_PASCAL_CASE_RE = re.compile(r"^[A-Z][a-zA-Z0-9]*$")
+_PASCAL_CASE_RE = re.compile(r"^_?[A-Z][a-zA-Z0-9]*$")
+_AST_VISITOR_METHOD_RE = re.compile(r"^visit_[A-Z]")
 _TERMINATOR_TYPES = (ast.Return, ast.Raise, ast.Break, ast.Continue)
-
 
 def _is_dunder(name: str) -> bool:
     return name.startswith("__") and name.endswith("__")
@@ -43,7 +43,11 @@ def scan_naming_conventions(file_path: str, source: str) -> list[Finding]:
 
     for node in ast.walk(tree):
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            if _is_dunder(node.name) or _SNAKE_CASE_RE.match(node.name):
+            if (
+                _is_dunder(node.name)
+                or _SNAKE_CASE_RE.match(node.name)
+                or _AST_VISITOR_METHOD_RE.match(node.name)
+            ):
                 continue
             findings.append(Finding(
                 rule_id="QUAL-NAMING-FUNCTION", category="naming_convention",

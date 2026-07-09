@@ -98,6 +98,20 @@ def test_detects_eval_usage():
     assert "dangerous_eval" in _categories(result)
 
 
+def test_eval_mentioned_in_string_not_flagged():
+    """Real false positive found scanning this project's own source: a docstring or
+    message describing the eval() rule was itself matched as a violation."""
+    code = 'message = "Use of eval() on data that may be externally influenced."\n'
+    result = make_agent().scan_file("rules.py", code)
+    assert "dangerous_eval" not in _categories(result)
+
+
+def test_verify_false_mentioned_in_string_not_flagged():
+    code = 'message = "TLS certificate verification is disabled (verify=False)."\n'
+    result = make_agent().scan_file("rules.py", code)
+    assert "insecure_transport" not in _categories(result)
+
+
 def test_detects_pickle_loads():
     code = "import pickle\ndata = pickle.loads(payload)\n"
     result = make_agent().scan_file("handler.py", code)
