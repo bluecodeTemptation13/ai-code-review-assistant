@@ -9,7 +9,7 @@ a PR comment.
 
 Build complete for the full planned scope: Security Scanner, Performance
 Analyzer, Code Quality Agent, LangGraph orchestration, Report Generator,
-GitHub webhook. Validated three separate ways:
+GitHub webhook. Validated four separate ways:
 
 1. **Real GitHub PR** — webhook fired, files fetched, review posted as
    an actual PR comment on a live repo.
@@ -18,6 +18,9 @@ GitHub webhook. Validated three separate ways:
    found and fixed 6 genuine false positives (see below).
 3. **67 unit tests**, all passing, covering every fix with a regression
    test that reproduces the exact original bug.
+4. **Docker build and run** — image builds cleanly, container starts,
+   `/health` responds, and the `HEALTHCHECK` directive is confirmed
+   actually functioning (not just present in the file).
 
 No fabricated metrics anywhere — review-time reduction, issue-count
 stats, etc. are not claimed, including on the resume, since that needs
@@ -191,10 +194,13 @@ Runs as a non-root user; `/health` is the container health-check
 endpoint. `.dockerignore` excludes `.env` (real secrets never get
 baked into the image), `.git`, virtual envs, and dev-only files.
 
-**Status:** Dockerfile and `.dockerignore` are written and reviewed,
-but `docker build` itself has not yet been run — that's a manual step
-still pending, not something to assume works just because it reads
-correctly.
+**Status: built and verified.** `docker build` completes cleanly (6
+steps, ~2 min including base image pull and dependency install).
+`docker run` starts the container, and `curl http://localhost:8000/health`
+returns `{"status":"ok"}`. The `HEALTHCHECK` directive is confirmed
+actually working, not just present in the file — the container logs
+show it hitting `/health` automatically every 30 seconds from inside
+the container, independent of any external request.
 
 ## Directory structure
 
@@ -219,8 +225,6 @@ tests/
 
 ## Not yet done
 
-- `docker build` has not actually been run — Dockerfile is reviewed but
-  unverified in practice
 - The Claude LLM review pass (`review_with_llm`) has never made a real
   API call — built and unit-tested with a mocked client, but the actual
   reasoning/confirm-prune behavior has not been observed live
