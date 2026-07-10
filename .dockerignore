@@ -1,0 +1,35 @@
+# Never bake real secrets into the image - .env has actual tokens/keys,
+# .env.example is the only one that's safe (and it's just a template anyway).
+.env
+
+# Version control - not needed at runtime, and .git can be large.
+.git
+.gitignore
+
+# Virtual environments - never needed inside the container; dependencies
+# are installed fresh via requirements.txt in the Dockerfile itself.
+.venv
+venv
+env
+
+# Python bytecode/cache - regenerated at runtime, just bloats the image.
+__pycache__
+*.pyc
+*.pyo
+*.egg-info
+
+# Test artifacts and caches.
+.pytest_cache
+.ruff_cache
+.mypy_cache
+
+# Dev-only tooling and docs - not needed to run the service.
+tests
+README.md
+demo.py
+scan_repo.py
+
+# Editor/OS cruft.
+.vscode
+.idea
+.DS_Store
